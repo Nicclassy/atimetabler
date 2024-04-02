@@ -3,23 +3,20 @@ from concurrent.futures import ThreadPoolExecutor
 
 from selenium import webdriver
 from selenium.webdriver import Keys
-from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.common.by import By
+from selenium.webdriver.remote.webelement import WebElement
 from selenium.common.exceptions import NoSuchElementException
 
 from constants import (
     UnitAssesment,
     UnitAssesments,
 
+    ENABLE_CACHING,
+    HEADLESS_BROWSER,
+
     SEMESTER_PATTERN,
     UNIT_URL_FORMAT,
     UNIT_NOT_FOUND_URL,
-
-    TYPE,
-    DESCRIPTION,
-    WEIGHT,
-    DUE,
-    LENGTH,
 
     CHILDREN_XPATH,
     FIRST_TD_XPATH,
@@ -30,6 +27,8 @@ from constants import (
     PRIMARY_XPATH,
     ASSESMENT_BUTTON_XPATH,
 )
+from formatting import unit_assesment_from_web_elements
+from caching import cache_unit_assesments, read_from_cache, cache_exists
 
 def _find_by_xpath(locator: WebElement | webdriver.Chrome, xpath: str) -> Optional[WebElement]:
     try:
@@ -67,13 +66,7 @@ def _get_unit_assesment(tbody: WebElement) -> Optional[UnitAssesment]:
     if len(row) != 5:
         return None
 
-    return {
-        TYPE: row[0].text,
-        DESCRIPTION: row[1].text,
-        WEIGHT: row[2].text,
-        DUE: row[3].text,
-        LENGTH: row[4].text
-    }
+    return unit_assesment_from_web_elements(row)
 
 def _get_unit_assesments(driver: webdriver.Chrome) -> UnitAssesments:
     assesment_button = driver.find_element(By.XPATH, ASSESMENT_BUTTON_XPATH)
@@ -94,7 +87,11 @@ def _get_unit_assesments(driver: webdriver.Chrome) -> UnitAssesments:
 
 def _get_unit_assesments_in_semester(unit_code: str, 
                                      semester: int) -> Optional[UnitAssesments]:
-    driver = webdriver.Chrome()
+    options = webdriver.ChromeOptions()
+    if HEADLESS_BROWSER:
+        options.add_argument("--headless")
+
+    driver = webdriver.Chrome(options=options)
     unit_url = _get_unit_url(unit_code)
     driver.get(unit_url)
 
@@ -104,7 +101,7 @@ def _get_unit_assesments_in_semester(unit_code: str,
 
     unit_outline_url = _get_unit_outline_url(driver, semester)
     if unit_outline_url is None:
-        print("The unit outline for", unit_code, "in", semester, "was not found.")
+        print("The unit outline for", unit_code, "in semester", semester, "was not found.")
         return None
     
     driver.get(unit_outline_url)
@@ -116,15 +113,21 @@ def _get_unit_assesments_in_semester(unit_code: str,
 def get_assesments_for_units(unit_codes: list[str], 
                              semester: int) -> dict[str, UnitAssesments]:
     with ThreadPoolExecutor(max_workers=len(unit_codes)) as executor:
-        futures = {
-            unit_code: executor.submit(
-                _get_unit_assesments_in_semester, 
-                unit_code, semester
-            ) 
-            for unit_code in unit_codes
-        }
-        return {
-            unit_code: future.result() 
-            for unit_code, future in futures.items()
-        }
+        assesments = {}
+        futures = {}
+        for unit_code in unit_codes:
+            if ENABLE_CACHING and cache_exists(unit_code):
+                assesments[unit_code] = read_from_cache(unit_code)
+            else:
+                futures[unit_code] = executor.submit(
+                    _get_unit_assesments_in_semester,
+                    unit_code, semester
+                )
 
+        for unit_code, future in futures.items():
+            unit_assesments = future.result()
+            if ENABLE_CACHING and unit_assesments and not cache_exists(unit_code):
+                cache_unit_assesments(unit_code, unit_assesments)
+            assesments[unit_code] = unit_assesments
+
+        return assesments

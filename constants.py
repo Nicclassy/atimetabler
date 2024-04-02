@@ -1,13 +1,20 @@
+import os
 import re
+
+os.chdir(os.path.dirname(__file__))
 
 UnitAssesment = dict[str, str]
 UnitAssesments = list[UnitAssesment]
 
+HEADLESS_BROWSER = True
+ENABLE_CACHING = True
 SEMESTER_PATTERN = re.compile(r"Semester (\d) \d+")
 
 TYPE = "type"
+NAME = "name"
 DESCRIPTION = "description"
 WEIGHT = "weight"
+WEEK = "week"
 DUE = "due"
 LENGTH = "length"
 
