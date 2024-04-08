@@ -1,3 +1,3 @@
-from retrieval import get_assesments_for_units
+from atimetabler.latexify import assesment_timetable
 
-print(get_assesments_for_units(["COMP2017"], semester=1))
+assesment_timetable(["COMP2823", "COMP2017", "ENGD2001", "FASS2200", "MUSC2653"])
