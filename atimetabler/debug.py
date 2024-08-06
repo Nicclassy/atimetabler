@@ -42,7 +42,3 @@ def debug_print(*args: object, code: int = 1):
     magenta(f"{function:<20}")
     yellow(" ]: ")
     colour(*args, newline=True)
-
-
-
-

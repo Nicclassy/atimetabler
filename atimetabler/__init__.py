@@ -1,0 +1,1 @@
+from atimetabler.latexify import assesment_timetable

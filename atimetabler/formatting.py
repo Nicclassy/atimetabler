@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Optional
 from selenium.webdriver.remote.webelement import WebElement
 
-from constants import (
+from atimetabler.constants import (
     UnitAssesment,
 
     DUE_DATE_TEXT_PATTERN,

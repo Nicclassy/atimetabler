@@ -1,7 +1,7 @@
 import os
 import csv
 
-from constants import UnitAssesments, CSV_FIELD_NAMES
+from atimetabler.constants import UnitAssesments, CSV_FIELD_NAMES
 
 CACHE_FOLDER_NAME = "cache"
 CACHE_FILE_EXTENSION = "csv"

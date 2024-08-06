@@ -3,8 +3,8 @@ import subprocess
 import csv
 from typing import TextIO
 
-from constants import UnitAssesments, CSV_FIELD_NAMES
-from debug import debug_print
+from atimetabler.constants import SEMESTER, CSV_FIELD_NAMES, UnitAssesments
+from atimetabler.debug import debug_print
 from atimetabler.retrieval import get_assesments_for_units
 
 FILENAME = "timetable"
@@ -65,11 +65,8 @@ def _table_beginning(tex_file: TextIO, unit_code: str,
     table_format_builder = ['|']
     table_headings_builder = []
     tex_file.write(TABLE_FORMAT_TEXT.format(heading_size, unit_code, row_spacing))
-    for i, column_heading in enumerate(column_headings, start=1):
-        if i == 4:
-            table_format_builder.append("l|")
-        else:
-            table_format_builder.append("X|")
+    for _, column_heading in enumerate(column_headings, start=1):
+        table_format_builder.append("X|")
         table_headings_builder.append(TABLE_HEADING_FORMAT.format(column_heading.capitalize()))
 
     table_headings = " & ".join(table_headings_builder) + LINE_END
@@ -111,6 +108,21 @@ def _document_end(tex_file: TextIO):
     tex_file.write(NEWLINE)
     tex_file.write(DOCUMENT_END)
 
+def _compile_pdf(pdf_folder: str, tex_path: str, delete_tex: bool):
+    try:
+        subprocess.run(f"cd {pdf_folder}; {LATEX_TO_PDF_COMMAND} {tex_path}", shell=True, stdout=subprocess.DEVNULL)
+    except:
+        debug_print("Failed to generate PDF.")
+    finally:
+        _delete_files(pdf_folder, tex_path, delete_tex)
+
+def _delete_files(pdf_folder: str, tex_path: str, delete_tex: bool):
+    if delete_tex:
+        subprocess.run(["rm", tex_path], stdout=subprocess.DEVNULL)
+
+    subprocess.run(["rm", os.path.join(pdf_folder, f"{FILENAME}.aux")], stdout=subprocess.DEVNULL)
+    subprocess.run(["rm", os.path.join(pdf_folder, f"{FILENAME}.log")], stdout=subprocess.DEVNULL)
+
 def write_csv_to_latex(tex_file: TextIO, csv_path: str):
     unit_code = os.path.basename(csv_path).split('.')[0].upper()
     with open(csv_path) as csv_file:
@@ -129,24 +141,6 @@ def write_unit_assesments_to_latex(tex_file: TextIO, unit_code: str, unit_assesm
         _table_row(tex_file, row)
     _table_end(tex_file)
 
-def _compile_pdf(pdf_folder: str, tex_path: str, delete_tex: bool):
-    try:
-        subprocess.run(f"cd {pdf_folder}; {LATEX_TO_PDF_COMMAND} {tex_path}", shell=True, stdout=subprocess.DEVNULL)
-    except:
-        debug_print("Failed to generate PDF.")
-        return
-    else:
-        print("Generated assesment timetable.")
-    finally:
-        _delete_files(pdf_folder, tex_path, delete_tex)
-
-def _delete_files(pdf_folder: str, tex_path: str, delete_tex: bool):
-    if delete_tex:
-        subprocess.run(["rm", tex_path], stdout=subprocess.DEVNULL)
-
-    subprocess.run(["rm", os.path.join(pdf_folder, f"{FILENAME}.aux")], stdout=subprocess.DEVNULL)
-    subprocess.run(["rm", os.path.join(pdf_folder, f"{FILENAME}.log")], stdout=subprocess.DEVNULL)
-
 def assesment_timetable_from_csv(csv_paths: list[str], 
                                  pdf_folder: str = DEFAULT_PDF_FOLDER, 
                                  delete_tex: bool = True):
@@ -161,7 +155,7 @@ def assesment_timetable_from_csv(csv_paths: list[str],
 
 def assesment_timetable(unit_codes: list[str], 
                         pdf_folder: str = DEFAULT_PDF_FOLDER, 
-                        semester: int = 1,
+                        semester: int = SEMESTER,
                         delete_tex: bool = True):
     tex_path = os.path.join(pdf_folder, FILENAME + '.' + EXTENSION)
     assesments_for_units = get_assesments_for_units(unit_codes, semester=semester)

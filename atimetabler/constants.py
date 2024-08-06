@@ -12,6 +12,7 @@ ENABLE_CACHING = True
 SEMESTER_PATTERN = re.compile(r"Semester (\d) \d+")
 DUE_DATE_TEXT_PATTERN = re.compile("^Due date: ")
 
+SEMESTER = 1
 TYPE = "type"
 NAME = "name"
 DESCRIPTION = "description"

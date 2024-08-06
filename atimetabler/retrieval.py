@@ -6,10 +6,8 @@ from selenium.webdriver import Keys
 from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.common.exceptions import NoSuchElementException
-from selenium.webdriver.common.service import Service
-from webdriver_manager.chrome import ChromeDriverManager
 
-from constants import (
+from atimetabler.constants import (
     UnitAssesment,
     UnitAssesments,
 
@@ -29,7 +27,7 @@ from constants import (
     PRIMARY_XPATH,
     ASSESMENT_BUTTON_XPATH,
 )
-from debug import debug_print
+from atimetabler.debug import debug_print
 from atimetabler.formatting import unit_assesment_from_web_elements
 from atimetabler.caching import cache_unit_assesments, read_from_cache, cache_exists
 
@@ -90,8 +88,6 @@ def _get_unit_assesments(driver: webdriver.Chrome) -> UnitAssesments:
 
 def _get_unit_assesments_in_semester(unit_code: str, 
                                      semester: int) -> Optional[UnitAssesments]:
-    # executable = ChromeDriverManager().install()
-    # service = Service(executable)
     options = webdriver.ChromeOptions()
     if HEADLESS_BROWSER:
         options.add_argument("--headless")
@@ -110,7 +106,10 @@ def _get_unit_assesments_in_semester(unit_code: str,
         return None
     
     driver.get(unit_outline_url)
-
+    if driver.current_url in UNIT_ERROR_URLS:
+        debug_print("The unit outline for", unit_code, "in semester", semester, "was not found.")
+        return None
+    
     unit_assesments = _get_unit_assesments(driver)
     driver.close()
     return unit_assesments
